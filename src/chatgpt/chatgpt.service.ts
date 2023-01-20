@@ -105,6 +105,8 @@ export class ChatgptService {
     );
     if (!conversation) {
       email = await this.getCurrentActiveChatGPT();
+    } else {
+      email = conversation.email;
     }
     // Send Message
     this.logger.debug(`Send message to ${email}: ${message}`);
@@ -134,6 +136,8 @@ export class ChatgptService {
         },
         update: {
           email,
+          conversationId: messageResult.conversationId,
+          messageId: messageResult.messageId,
         },
       });
       return messageResult;

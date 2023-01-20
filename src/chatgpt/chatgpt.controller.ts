@@ -52,9 +52,7 @@ export class ChatgptController {
     @Headers() headers: Record<string, string>
   ) {
     const { message } = messageDto;
-    return await this.chatgptService.sendChatGPTMessage(message, {
-      tenantId: TENANT_ID,
-    });
+    return await this.chatgptService.sendChatGPTMessageOnetime(message);
   }
   @Post('/message/:sessionId')
   async getChatGPTMessageBySessionId(
