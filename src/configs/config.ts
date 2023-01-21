@@ -20,6 +20,7 @@ const config: Config = {
     nopechaKey: process.env.NOPECHA_KEY,
     executablePath: process.env.EXECUTABLE_PATH || undefined,
     proxyServer: process.env.PROXY_SERVER || undefined,
+    userDataDir: process.env.USER_DATA_DIR || undefined,
   },
 };
 
