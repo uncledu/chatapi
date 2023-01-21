@@ -29,6 +29,9 @@ export class ChatgptPoolService {
     const chatgpt = new ChatGPTAPIBrowser({
       ...opts,
       ...this.chatgptConfig,
+      userDataDir: this.chatgptConfig.userDataDir
+        ? `${this.chatgptConfig.userDataDir}/${opts.email}`
+        : undefined,
     });
     await retry(
       async (_: any, num: number) => {

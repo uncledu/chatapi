@@ -26,4 +26,5 @@ export interface ChatgptConfig {
   nopechaKey?: string;
   executablePath?: string;
   proxyServer?: string;
+  userDataDir?: string;
 }
