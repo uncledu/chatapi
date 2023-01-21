@@ -261,4 +261,19 @@ export class ChatgptService {
       await this.startChatgptInstance(account.email);
     }
   }
+  // Update account status to Running
+  @Cron('1 * * * * *')
+  async heartbeat() {
+    const emails = Array.from(this.chatgptPoolService.accounts);
+    // update db account status
+    this.logger.debug(`Update account status: ${emails}`);
+    this.prismaService.chatGPTAccount.updateMany({
+      where: { email: { in: emails } },
+      data: { status: 'Starting' },
+    });
+    this.prismaService.chatGPTAccount.updateMany({
+      where: { email: { notIn: emails } },
+      data: { status: 'Running' },
+    });
+  }
 }
