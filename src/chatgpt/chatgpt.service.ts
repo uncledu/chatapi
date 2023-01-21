@@ -235,7 +235,7 @@ export class ChatgptService {
     this.logger.debug(`Reset conversation ${sessionId}`);
     const conversation = await this.prismaService.chatGPTConversation.delete({
       where: {
-        tenantId_sessionId: { sessionId, tenantId: 'default' },
+        tenantId_sessionId: { sessionId, tenantId },
       },
     });
     if (!conversation) {
