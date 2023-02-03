@@ -11,6 +11,7 @@ export class ChatgptPoolService {
   chatgptPool: Map<string, ChatGPTAPIBrowser> = new Map();
   // Record the conversation between user email
   logger = new Logger('ChatgptPoolService');
+  lockMap: Map<string, boolean> = new Map();
   constructor(private configService: ConfigService) {
     this.chatgptConfig = this.configService.get<ChatgptConfig>('chatgpt');
   }
@@ -75,15 +76,51 @@ export class ChatgptPoolService {
       chatgpt.refreshSession();
     }
   }
+  async lockSendMessage(email: string) {
+    // try get lock
+    const lockMap = this.lockMap;
+    if (lockMap.has(email)) {
+      // try await 30s
+      for (let i = 0; i < 30; i++) {
+        if (!lockMap.has(email)) {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      if (lockMap.has(email)) {
+        throw new Error('Too many requests');
+      }
+    }
+    lockMap.set(email, true);
+    const locker = setTimeout(() => {
+      lockMap.delete(email);
+    }, 30000);
+    function unlock() {
+      clearTimeout(locker);
+      lockMap.delete(email);
+    }
+    return {
+      locker,
+      unlock,
+    };
+  }
   async sendMessage(
     message: string,
     options?: SendMessageOptions & { email?: string }
   ) {
+    const { unlock } = await this.lockSendMessage(options.email);
     const chatGPT = this.getChatGPTInstanceByEmail(options.email);
     if (!chatGPT) {
-      throw new Error('ChatGPT instance not found');
+      const error = new Error('ChatGPT instance not found');
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      error.statusCode = 404;
+      unlock();
+      throw error;
     }
     const response = await chatGPT.sendMessage(message, options);
+    unlock();
+    // Unlock
     return response;
   }
 }
