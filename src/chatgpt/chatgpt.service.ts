@@ -2,20 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { ChatgptPoolService } from './chatgpt-pool/chatgpt-pool.service';
 import { Cron } from '@nestjs/schedule';
-import { AppConfig } from 'src/configs/config.interface';
-import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class ChatgptService {
   logger = new Logger('ChatgptService');
-  enableMessageRecord = false;
   constructor(
     private prismaService: PrismaService,
-    private chatgptPoolService: ChatgptPoolService,
-    private configService: ConfigService
+    private chatgptPoolService: ChatgptPoolService
   ) {
-    const { enableMessageRecord } =
-      this.configService.get<AppConfig>('appConfig');
-    this.enableMessageRecord = enableMessageRecord;
     (async () => {
       await this.stopAllChatGPTInstances();
       await this.startAllDownAccount();
@@ -147,20 +140,14 @@ export class ChatgptService {
           messageId: messageResult.messageId,
         },
       });
-      if (this.enableMessageRecord) {
-        await this.recordChatGPTMessage({
-          message,
-          chatGPTResponse: messageResult,
-        });
-      }
       return messageResult;
     } catch (e) {
+      this.logger.error(`Send message to ${email} failed: ${e}`);
       // Update Email status
-      await this.chatGPTExceptionHandle({
-        email,
-        exception: e,
+      this.prismaService.chatGPTAccount.update({
+        where: { email },
+        data: { status: 'Error' },
       });
-      throw e;
     }
   }
   async sendChatGPTMessageOnetime(message: string) {
@@ -178,45 +165,14 @@ export class ChatgptService {
           message: null,
         };
       }
-      if (this.enableMessageRecord) {
-        await this.recordChatGPTMessage({
-          message,
-          chatGPTResponse: messageResult,
-        });
-      }
       return messageResult;
     } catch (e) {
+      this.logger.error(`Send message to ${email} failed: ${e}`);
       // Update Email status
-      await this.chatGPTExceptionHandle({
-        email,
-        exception: e,
+      this.prismaService.chatGPTAccount.update({
+        where: { email },
+        data: { status: 'Error' },
       });
-      throw e;
-    }
-  }
-  async recordChatGPTMessage({
-    message,
-    chatGPTResponse,
-  }: {
-    message: string;
-    chatGPTResponse: {
-      response: string;
-      conversationId: string;
-      messageId: string;
-    };
-  }) {
-    const { response, conversationId, messageId } = chatGPTResponse;
-    try {
-      await this.prismaService.chatGPTMessageResult.create({
-        data: {
-          message,
-          response,
-          conversationId,
-          messageId,
-        },
-      });
-    } catch (e) {
-      this.logger.error(`Record message failed: ${e}`);
     }
   }
   async startChatgptInstance(email: string) {
@@ -258,9 +214,6 @@ export class ChatgptService {
           },
           {
             status: 'Error',
-          },
-          {
-            status: 'Overload',
           },
         ],
       },
@@ -314,50 +267,13 @@ export class ChatgptService {
     const emails = Array.from(this.chatgptPoolService.accounts);
     // update db account status
     this.logger.debug(`Update account status: ${emails}`);
-    // Update For updatetime
-    await this.prismaService.chatGPTAccount.updateMany({
-      where: { email: { in: emails }, status: 'Running' },
-      data: { updatedAt: new Date(), status: 'Running' },
+    this.prismaService.chatGPTAccount.updateMany({
+      where: { email: { in: emails } },
+      data: { status: 'Starting' },
     });
-    // Update For overload 1h
-    await this.prismaService.chatGPTAccount.updateMany({
-      where: {
-        email: { in: emails },
-        status: 'Overload',
-        updatedAt: { lt: new Date(new Date().getTime() - 1000 * 60 * 60) },
-      },
-      data: { updatedAt: new Date(), status: 'Running' },
+    this.prismaService.chatGPTAccount.updateMany({
+      where: { email: { notIn: emails } },
+      data: { status: 'Running' },
     });
-  }
-  async chatGPTExceptionHandle({
-    exception,
-    email,
-  }: {
-    exception: Error & {
-      statusCode: number;
-      statusText: string;
-    };
-    email: string;
-  }): Promise<void> {
-    switch (true) {
-      case exception.message.includes('Only one message at a time.'):
-        this.logger.error(`Account ${email} is busy`);
-        break;
-      case exception.message.includes('1h'):
-        this.logger.error(`Account ${email} is overload 1h`);
-        break;
-      case exception.statusCode === 429:
-        // await this.prismaService.chatGPTAccount.update({
-        //   where: { email },
-        //   data: { status: 'Overload' },
-        // });
-        this.logger.error(`Account ${email} is busy`);
-        break;
-      default:
-        this.logger.error(
-          `Account ${email} is error, ${exception.message} ${exception.statusCode} ${exception.statusText}`
-        );
-        break;
-    }
   }
 }

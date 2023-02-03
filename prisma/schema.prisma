@@ -10,7 +10,6 @@ generator client {
 
 enum ChatGPTState {
   Running
-  Overload
   Stopped
   Error
   Starting
@@ -44,14 +43,4 @@ model ChatGPTConversation {
   @@unique([conversationId])
   @@unique([tenantId, sessionId])
   @@map("chatgpt_conversation")
-}
-
-model ChatGPTMessageResult {
-  id             String   @id @default(cuid())
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  conversationId String   @map("conversation_id")
-  messageId      String   @map("message_id")
-  message        String
-  response       String
 }

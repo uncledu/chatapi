@@ -22,10 +22,6 @@ const config: Config = {
     proxyServer: process.env.PROXY_SERVER || undefined,
     userDataDir: process.env.USER_DATA_DIR || undefined,
   },
-  appConfig: {
-    enableMessageRecord:
-      process.env.ENABLE_MESSAGE_RECORD === 'true' ? true : false,
-  },
 };
 
 export default (): Config => config;

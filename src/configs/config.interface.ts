@@ -3,7 +3,6 @@ export interface Config {
   cors: CorsConfig;
   swagger: SwaggerConfig;
   chatgpt: ChatgptConfig;
-  appConfig: AppConfig;
 }
 
 export interface NestConfig {
@@ -28,8 +27,4 @@ export interface ChatgptConfig {
   executablePath?: string;
   proxyServer?: string;
   userDataDir?: string;
-}
-
-export interface AppConfig {
-  enableMessageRecord?: boolean;
 }

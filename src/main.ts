@@ -4,8 +4,6 @@ import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { PrismaClientExceptionFilter, PrismaService } from 'nestjs-prisma';
 import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-
 import type {
   CorsConfig,
   NestConfig,
@@ -24,10 +22,7 @@ async function bootstrap() {
 
   // Prisma Client Exception Filter for unhandled exceptions
   const { httpAdapter } = app.get(HttpAdapterHost);
-  app.useGlobalFilters(
-    new PrismaClientExceptionFilter(httpAdapter),
-    new HttpExceptionFilter()
-  );
+  app.useGlobalFilters(new PrismaClientExceptionFilter(httpAdapter));
 
   const configService = app.get(ConfigService);
   const nestConfig = configService.get<NestConfig>('nest');
